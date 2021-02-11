@@ -140,8 +140,9 @@ def main():
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
     
-    
+
     rospy.Subscriber(camera_topic, CompressedImage, img_listner, queue_size=1)
+    rospy.wait_for_message(camera_topic, CompressedImage)
     items = rospy.get_param("~items",['cup', 'bottle'])
     detection_cb_lambda = lambda data: detection_cb(data, items, point_cloud_data, alvar_marker)
     
