@@ -5,8 +5,9 @@ import cv2
 import numpy as np
 import sys
 from std_msgs.msg import String, Int16, Header
-from geometry_msgs.msg import Point, Quaternion, PoseStamped
+from geometry_msgs.msg import Point, Quaternion, PoseStamped, Twist, Pose
 from sensor_msgs.msg import CompressedImage, PointCloud2
+from nav_msgs.msg import Odometry
 import sensor_msgs.point_cloud2 as pc2
 from obj_detector.msg import Detection_msg
 from ar_track_alvar_msgs.msg import AlvarMarkers, AlvarMarker
@@ -36,44 +37,81 @@ class pointcloud():
     def listener(self,msg):
         self.data = msg
 
+class KLF_alvarMarker():
+    def __init__(self):
+        rospy.Subscriber('/mobile_base_controller/odom', Odometry, self.odom_cb, queue_size=1)
+        self.x = 0
+        self.y = 0
+        self.x_dot = 0
+        self.y_dot = 0
+        self.dt = 0.05
+        self.x_vec = np.array([self.x, self.y]) #, self.x_dot, self.y_dot)
+        self.p = np.zeros((2,2))
+        self.q = np.eye((2))*0.1
+        self.r = np.eye((2))*0.01
+
+    def odom_cb(self,msg):
+        self.odom = msg.twist.twist
+        self.predict()  
+    
+    def predict(self):
+        self.x_vec = self.x_vec - self.dt*np.array([self.odom.linear.x, self.odom.angular.z*self.x_vec[0]])
+        self.p = self.p+self.q
+        
+    
+    def update(self,observe):
+        observe_vec = np.array([observe.pose.position.x, observe.pose.position.y])
+        y_vec = observe_vec - self.x_vec
+        s = self.p + self.r
+        k = self.p.dot(np.linalg.inv(s))
+        self.x_vec = self.x_vec + k.dot(y_vec)
+        self.p = (np.eye(2)-k).dot(self.p)
+        # print(self.x_vec)
+        
+
 class Alvar_markers():
     def __init__(self,publisher):
         self.data = AlvarMarkers()
         self.data.markers = [AlvarMarker() , AlvarMarker()]
         self.pub = publisher
         self.data.markers[0].id = 1
+
         self.data.markers[1].id = 2
         self.data.header.frame_id = 'base_footprint'
+        self.last_update = rospy.Time.now()
 
-    def create(self, location, score):
-        global tf_buffer 
-        rate = rospy.Rate(5.0)
-    
-        try:
-            transform = tf_buffer.lookup_transform('base_footprint',
-                                        location.header.frame_id, #source frame
-                                        rospy.Time(0), #get the tf at first available time
-                                        rospy.Duration(1.0)) #wait for 1 second
-            pose_transformed = tf2_geometry_msgs.do_transform_pose(location, transform)
-            self.data.header.stamp = rospy.Time.now()
-            
-            self.data.markers[0].pose = pose_transformed
-            self.data.markers[0].header = location.header
-            self.data.markers[0].header.frame_id = self.data.header.frame_id
-            self.data.markers[0].confidence = score
-            self.data.markers[0].pose.pose.position.z +=0.0
-            self.data.markers[0].pose.pose.orientation = Quaternion(0, 0, 0, 1)
-                    
-            self.data.markers[1].pose = copy.deepcopy(pose_transformed)
-            self.data.markers[1].header = location.header
-            self.data.markers[1].confidence = score
-            self.data.markers[1].pose.pose.position.z -=0.08
-            self.data.markers[1].pose.pose.orientation = Quaternion(0, 0, 0, 1)
-            
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            rate.sleep()
-    
+    def update(self, pose_transformed, score):
+        self.data.header.stamp = rospy.Time.now()
+        self.last_update = rospy.Time.now()
+        self.data.markers[0].pose = pose_transformed
+        self.data.markers[0].header.stamp = rospy.Time.now()
+        self.data.markers[0].header.frame_id = self.data.header.frame_id
+        self.data.markers[0].confidence = score
+        self.data.markers[0].pose.pose.position.z +=0.0
+        self.data.markers[0].pose.pose.orientation = Quaternion(0, 0, 0, 1)
+
+        self.data.markers[1].pose = copy.deepcopy(pose_transformed)
+        self.data.markers[1].header.stamp = rospy.Time.now()
+        self.data.markers[1].header.frame_id = self.data.header.frame_id
+        self.data.markers[1].confidence = score
+        self.data.markers[1].pose.pose.position.z -=0.08
+        self.data.markers[1].pose.pose.orientation = Quaternion(0, 0, 0, 1)
+
+        
+    def predict(self):
+        global estimator
+        predict_pose = PoseStamped()
+        predict_pose.pose.position.x = estimator.x_vec[0]
+        predict_pose.pose.position.y = estimator.x_vec[1]
+        predict_pose.header.frame_id = 'base_footprint'
+        predict_pose.pose.position.z =  self.data.markers[0].pose.pose.position.z
+        self.update(predict_pose, 0.1)
+        compress_image = createCompresseImage(kinect2_img)
+        pub_img.publish(compress_image)
+
     def publish(self, event):
+        if ((rospy.Time.now() - self.last_update).to_sec > 1.0):
+            self.predict()
         self.pub.publish(self.data)
 
 def img_listner(msg):
@@ -98,7 +136,6 @@ def publish_image(stamp_pose, detection):
     pub_img.publish(compress_image)
     
 def list_2_stampPose(location):
-    global tf_buffer, tf_listener
     pose = Point(location[0], location[1], location[2])
     input_pose = PoseStamped()
     input_pose.pose.position = pose
@@ -109,33 +146,42 @@ def list_2_stampPose(location):
 
 
 def detection_cb(msg, items, point_cloud_data, alvar_marker):
-    global kinect2_img, pub_img
+    global kinect2_img, pub_img, tf_buffer, estimator 
     if msg.class_id in items:
         # global pose_pub
         [u ,v] = [int(msg.pose.x_center), int(msg.pose.y_center)]
-        try:
-            location_xyz = list(pc2.read_points(point_cloud_data.data, ('x', 'y', 'z'), skip_nans = True, uvs=[[u,v]])) # location type --> [(touple)]
-            converted_location = list_2_stampPose(location_xyz[0])
-            alvar_marker.create(converted_location, msg.score)
-            publish_image(converted_location, msg)
-            # pose_pub.publish(converted_location)
-        except:
-            pass
-    else:
-        compress_image = createCompresseImage(kinect2_img)
-        pub_img.publish(compress_image)
-
+        # try:
+            
+        location_xyz = list(pc2.read_points(point_cloud_data.data, ('x', 'y', 'z'), skip_nans = True, uvs=[[u,v]])) # location type --> [(touple)]
         
+        converted_location = list_2_stampPose(location_xyz[0])
+        transform = tf_buffer.lookup_transform('base_footprint',
+                                converted_location.header.frame_id, #source frame
+                                rospy.Time(0), #get the tf at first available time
+                                rospy.Duration(1.0)) #wait for 1 second
+        pose_transformed = tf2_geometry_msgs.do_transform_pose(converted_location, transform)
+        # except:
+        #     pass
+
+        alvar_marker.update(pose_transformed, msg.score)
+        estimator.update(pose_transformed)
+        
+        publish_image(converted_location, msg)
+        # pose_pub.publish(converted_location)
+
+
+
 
 def main():
     
     point_cloud_data = pointcloud()
-    global tf_buffer, tf_listener, pub_img, pub_markers #, pose_pub
+    global tf_buffer, tf_listener, pub_img, pub_markers, estimator #, pose_pub
 
     pub_markers = rospy.Publisher(markers_publish_topic, AlvarMarkers, queue_size= 10)
     pub_img = rospy.Publisher(img_publish_topic, CompressedImage, queue_size=  1)
     # pose_pub = rospy.Publisher('/find_objects_node/object_pose', PoseStamped, queue_size= 1)
     alvar_marker = Alvar_markers(pub_markers)
+    estimator = KLF_alvarMarker()
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
@@ -146,8 +192,9 @@ def main():
     items = rospy.get_param("~items",['cup', 'bottle'])
     detection_cb_lambda = lambda data: detection_cb(data, items, point_cloud_data, alvar_marker)
     
-    rospy.Subscriber(detect_topic, Detection_msg, detection_cb_lambda, queue_size= 1)
+    rospy.Subscriber(detect_topic, Detection_msg, detection_cb_lambda, queue_size= 10)
     rospy.wait_for_message(detect_topic, Detection_msg)
+    
     rospy.Timer(rospy.Duration(0.2), alvar_marker.publish)    
     rospy.spin()
 
