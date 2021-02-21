@@ -31,7 +31,6 @@ rosservice call /pick_go "{}"
         <param name="~db_path" value=""/>
     </node> 
 
-
 	<node name="object_view" pkg="rqt_image_view" type="rqt_image_view" >
 		<remap from="image" to="yolo4_result/obj_pick/compressed" />
 	</node>
