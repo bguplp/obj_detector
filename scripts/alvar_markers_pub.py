@@ -99,7 +99,7 @@ class Alvar_markers():
 
         
     def predict(self):
-        global estimator
+        global estimator, pub_img, kinect2_img
         predict_pose = PoseStamped()
         predict_pose.pose.position.x = estimator.x_vec[0]
         predict_pose.pose.position.y = estimator.x_vec[1]
@@ -146,34 +146,33 @@ def list_2_stampPose(location):
 
 
 def detection_cb(msg, items, point_cloud_data, alvar_marker):
-    global kinect2_img, pub_img, tf_buffer, estimator 
+    global kinect2_img, tf_buffer, estimator 
     if msg.class_id in items:
         # global pose_pub
         [u ,v] = [int(msg.pose.x_center), int(msg.pose.y_center)]
         # try:
-            
         location_xyz = list(pc2.read_points(point_cloud_data.data, ('x', 'y', 'z'), skip_nans = True, uvs=[[u,v]])) # location type --> [(touple)]
-        
-        converted_location = list_2_stampPose(location_xyz[0])
-        transform = tf_buffer.lookup_transform('base_footprint',
-                                converted_location.header.frame_id, #source frame
-                                rospy.Time(0), #get the tf at first available time
-                                rospy.Duration(1.0)) #wait for 1 second
-        pose_transformed = tf2_geometry_msgs.do_transform_pose(converted_location, transform)
-        # except:
-        #     pass
+        if location_xyz:
+            converted_location = list_2_stampPose(location_xyz[0])	
+            transform = tf_buffer.lookup_transform('base_footprint',
+                                                converted_location.header.frame_id, #source frame
+                                                rospy.Time(0), #get the tf at first available time
+                                                rospy.Duration(1.0)) #wait for 1 second
+            pose_transformed = tf2_geometry_msgs.do_transform_pose(converted_location, transform)
+            alvar_marker.update(pose_transformed, msg.score)
+            estimator.update(pose_transformed)
+            publish_image(converted_location, msg)
 
-        alvar_marker.update(pose_transformed, msg.score)
-        estimator.update(pose_transformed)
-        
-        publish_image(converted_location, msg)
+        # except:
+        # 	pass
+       
+       
         # pose_pub.publish(converted_location)
 
 
 
 
 def main():
-    
     point_cloud_data = pointcloud()
     global tf_buffer, tf_listener, pub_img, pub_markers, estimator #, pose_pub
 
@@ -192,7 +191,7 @@ def main():
     items = rospy.get_param("~items",['cup', 'bottle'])
     detection_cb_lambda = lambda data: detection_cb(data, items, point_cloud_data, alvar_marker)
     
-    rospy.Subscriber(detect_topic, Detection_msg, detection_cb_lambda, queue_size= 10)
+    rospy.Subscriber(detect_topic, Detection_msg, detection_cb_lambda, queue_size= 15)
     rospy.wait_for_message(detect_topic, Detection_msg)
     
     rospy.Timer(rospy.Duration(0.2), alvar_marker.publish)    
