@@ -67,6 +67,58 @@
         <gravity>1</gravity>
       </link>
     </model>
+	<model name='boxy'>
+      <pose frame=''>2.10646 -0.071902 0.5 0 -0 0</pose>
+      <link name='link'>
+        <inertial>
+          <mass>1</mass>
+          <inertia>
+            <ixx>0.166667</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.166667</iyy>
+            <iyz>0</iyz>
+            <izz>0.166667</izz>
+          </inertia>
+        </inertial>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.999999 0.999997 0.999994</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.999999 0.999997 0.999994</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Whit</name>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+    </model>
     <model name='table_dining'>
       <pose frame=''>2 0 0 0 -0 0</pose>
       <link name='link_24'>
@@ -3339,6 +3391,7 @@
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
+    
       <model name='table'>
         <pose frame=''>2.3786 0.811816 -7.2e-05 -1e-06 -6e-06 -1.59257</pose>
         <scale>1 1 1</scale>
@@ -3359,6 +3412,16 @@
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
+	<model name='unit_box_0'>
+    	<pose frame=''>1.57092 -0.126736 0.604229 -0.000102 -1.57078 -0.003676</pose>
+        <scale>0.568456 1.50431 0.047972</scale>
+	    <link name='link'>
+			<pose frame=''>1.57092 -0.126736 0.604229 -0.000102 -1.57078 -0.003676</pose>
+				<velocity>0 0 0 0 -0 0</velocity>
+				<acceleration>-0.634452 -4.10748 12.6602 -1.219 -0.909294 -3.14055</acceleration>
+				<wrench>-0.634452 -4.10748 12.6602 0 -0 0</wrench>
+	    </link>
+	</model>
       <light name='sun'>
         <pose frame=''>0 0 10 0 -0 0</pose>
       </light>
