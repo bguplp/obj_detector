@@ -40,11 +40,15 @@ class pointcloud():
 class KLF_alvarMarker():
     def __init__(self):
         rospy.Subscriber('/mobile_base_controller/odom', Odometry, self.odom_cb, queue_size=1)
+
+        self.dt = 0.1
+        rospy.Timer(rospy.Duration(self.dt),self.predict)
+
         self.x = 0.
         self.y = 0.
         self.x_dot = 0
         self.y_dot = 0
-        self.dt = 0.5
+        
         self.x_vec = np.array([[self.x], [self.y]], dtype=np.float32) #, self.x_dot, self.y_dot)
         self.p = np.zeros((2,2))
         self.q = np.eye((2))*0.1
@@ -52,9 +56,7 @@ class KLF_alvarMarker():
 
     def odom_cb(self,msg):
         self.odom = msg.twist.twist
-        rospy.sleep(self.dt)
-        self.predict()  
-    
+
     def predict(self):
         F = np.array([[1-self.dt*self.odom.linear.x , 0],
                         [0, 1-self.dt*self.odom.angular.z*self.x_vec[0]]], dtype=np.float32)
@@ -114,7 +116,7 @@ class Alvar_markers():
         pub_img.publish(compress_image)
 
     def publish(self, event):
-        if ((rospy.Time.now() - self.last_update).to_sec > 1.0):
+        if ((rospy.Time.now() - self.last_update).to_sec > 0.5):
             self.predict()
         self.pub.publish(self.data)
 

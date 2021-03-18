@@ -27,7 +27,9 @@ class image_convertor():
         self.cv_img = self.bridge.imgmsg_to_cv2(msg,desired_encoding = 'passthrough')
         self.resize_img  = cv2.resize(self.cv_img, self.shape,
                                interpolation=cv2.INTER_LINEAR)
+
         self.resize_img = self.resize_img/10
+
         cv2.imshow('img', self.resize_img)
         cv2.waitKey(2)
 
