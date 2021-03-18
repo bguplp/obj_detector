@@ -68,7 +68,7 @@
       </link>
     </model>
 	<model name='boxy'>
-      <pose frame=''>2.10646 -0.071902 0.5 0 -0 0</pose>
+      <pose frame=''>2.61655 0.701521 1.355766 0 0 0</pose>
       <link name='link'>
         <inertial>
           <mass>1</mass>
@@ -84,7 +84,7 @@
         <collision name='collision'>
           <geometry>
             <box>
-              <size>0.999999 0.999997 0.999994</size>
+              <size>0.083442 1.876200 0.681533</size>
             </box>
           </geometry>
           <max_contacts>10</max_contacts>
@@ -104,12 +104,12 @@
         <visual name='visual'>
           <geometry>
             <box>
-              <size>0.999999 0.999997 0.999994</size>
+              <size>0.083442 1.876200 0.681533</size>
             </box>
           </geometry>
           <material>
             <script>
-              <name>Gazebo/Whit</name>
+              <name>Gazebo/Green</name>
               <uri>file://media/materials/scripts/gazebo.material</uri>
             </script>
           </material>
@@ -3413,7 +3413,7 @@
         </link>
       </model>
 	<model name='unit_box_0'>
-    	<pose frame=''>1.57092 -0.126736 0.604229 -0.000102 -1.57078 -0.003676</pose>
+    	<pose frame=''>1.57092 -1 0.604229 -0.000102 0 0</pose>
         <scale>0.568456 1.50431 0.047972</scale>
 	    <link name='link'>
 			<pose frame=''>1.57092 -0.126736 0.604229 -0.000102 -1.57078 -0.003676</pose>
