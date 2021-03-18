@@ -40,37 +40,33 @@ class pointcloud():
 class KLF_alvarMarker():
     def __init__(self):
         rospy.Subscriber('/mobile_base_controller/odom', Odometry, self.odom_cb, queue_size=1)
-        self.x = 0.
-        self.y = 0.
+        self.x = 0
+        self.y = 0
         self.x_dot = 0
         self.y_dot = 0
-        self.dt = 0.5
-        self.x_vec = np.array([[self.x], [self.y]], dtype=np.float32) #, self.x_dot, self.y_dot)
+        self.dt = 0.05
+        self.x_vec = np.array([self.x, self.y]) #, self.x_dot, self.y_dot)
         self.p = np.zeros((2,2))
         self.q = np.eye((2))*0.1
         self.r = np.eye((2))*0.01
 
     def odom_cb(self,msg):
         self.odom = msg.twist.twist
-        rospy.sleep(self.dt)
         self.predict()  
     
     def predict(self):
-        F = np.array([[1-self.dt*self.odom.linear.x , 0],
-                        [0, 1-self.dt*self.odom.angular.z*self.x_vec[0]]], dtype=np.float32)
-        self.x_vec = np.matmul(F,self.x_vec) # Predicted state estimate
-        self.p = np.linalg.multi_dot([F,self.p, F.T]) + self.q # Predicted estimate covariance
-        #print(self.x_vec)
+        self.x_vec = self.x_vec - self.dt*np.array([self.odom.linear.x, self.odom.angular.z*self.x_vec[0]])
+        self.p = self.p+self.q
         
     
     def update(self,observe):
-        observe_vec = np.array([[observe.pose.position.x], [observe.pose.position.y]])
+        observe_vec = np.array([observe.pose.position.x, observe.pose.position.y])
         y_vec = observe_vec - self.x_vec
         s = self.p + self.r
         k = self.p.dot(np.linalg.inv(s))
         self.x_vec = self.x_vec + k.dot(y_vec)
         self.p = (np.eye(2)-k).dot(self.p)
-        
+        # print(self.x_vec)
         
 
 class Alvar_markers():
@@ -188,6 +184,7 @@ def main():
 
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    
 
     rospy.Subscriber(camera_topic, CompressedImage, img_listner, queue_size=1)
     rospy.wait_for_message(camera_topic, CompressedImage)
