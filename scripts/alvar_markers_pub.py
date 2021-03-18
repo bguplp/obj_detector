@@ -57,12 +57,12 @@ class KLF_alvarMarker():
     def odom_cb(self,msg):
         self.odom = msg.twist.twist
 
-    def predict(self):
+    def predict(self, event):
         F = np.array([[1-self.dt*self.odom.linear.x , 0],
                         [0, 1-self.dt*self.odom.angular.z*self.x_vec[0]]], dtype=np.float32)
         self.x_vec = np.matmul(F,self.x_vec) # Predicted state estimate
         self.p = np.linalg.multi_dot([F,self.p, F.T]) + self.q # Predicted estimate covariance
-        #print(self.x_vec)
+        # print(self.x_vec)
         
     
     def update(self,observe):

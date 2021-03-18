@@ -17,6 +17,14 @@ rosservice call /pick_go "{}"
 	<arg name="give_position" default="give" />
     
 
+ 	<!--<node name="find_obj_node" pkg="object_detection" type="find_objects_node" output="screen">
+        <param name="~object_id" value="1"/>
+        <param name="~depth_topic1" value="/kinect2/qhd/points"/> 
+
+        <param name="~depth_topic2" value="/kinect2/qhd/points"/>  
+        <rosparam file="$(find robotican_demos_upgrade)/config/red_object.yaml" command="load"/>
+    </node>-->
+
 	<node name="find_object_node" pkg="obj_detector" type="alvar_markers_pub.py" output="screen">
 	<param name="~items" value="['cup', 'bottle']" />
 </node>
@@ -34,6 +42,8 @@ rosservice call /pick_go "{}"
 	<node name="object_view" pkg="rqt_image_view" type="rqt_image_view" >
 		<remap from="image" to="/yolo4_result/obj_pick/compressed" />
 	</node>
+
+
 
 </launch>
 
