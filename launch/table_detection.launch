@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+
+
+<launch>
+    
+
+	<node name="place" pkg="obj_detector" type="table_detection.py" output="screen" 				required="true">
+			<param name="~pointCloudTopic" type="string" value="/kinect2/qhd/points" />
+	</node>
+
+</launch>
+
+
