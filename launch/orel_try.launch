@@ -25,6 +25,7 @@ rosservice call /pick_go "{}"
 		<param name="~start_position_name" value="$(arg start_position)"/>
 		<param name="~end_position_name" value="$(arg end_position)"/>
 		<param name="~object_name" value="can"/>
+		<param name="~using_yolo" value="true" />
 	</node>
 
     <node name="objects_handler" pkg="object_detection" type="objects_handler" output="screen">
