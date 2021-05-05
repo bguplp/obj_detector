@@ -3,10 +3,9 @@
 import rospy
 import cv2
 import numpy as np
-import sys
-from std_msgs.msg import String, Int16, Header
+# from std_msgs.msg import String, Int16, Header
 from obj_detector.srv import items, itemsResponse
-from geometry_msgs.msg import Point, Quaternion, PoseStamped, Twist, Pose
+from geometry_msgs.msg import Point, Quaternion, PoseStamped, Pose
 from sensor_msgs.msg import CompressedImage, PointCloud2
 from nav_msgs.msg import Odometry
 import sensor_msgs.point_cloud2 as pc2
@@ -22,7 +21,7 @@ import string
 # one of them its publish PoseStamped and image with the dot in the item center.
 # This script get
 
-# 
+#
 
 pointcloud_topic = '/kinect2/qhd/points'
 camera_topic = '/kinect2/qhd/image_color_rect/compressed'
@@ -43,9 +42,9 @@ class pointcloud():
 
 class KLF_alvarMarker():
     def __init__(self):
+        self.odom = rospy.wait_for_message('/mobile_base_controller/odom', Odometry).twist.twist
         rospy.Subscriber('/mobile_base_controller/odom', Odometry, self.odom_cb, queue_size=1)
-
-        self.dt = 0.1
+        self.dt = 0.01
         rospy.Timer(rospy.Duration(self.dt), self.predict)
         self.x = 0.
         self.y = 0.
@@ -60,10 +59,12 @@ class KLF_alvarMarker():
         self.odom = msg.twist.twist
 
     def predict(self, event):
-        F = np.array([[1-self.dt*self.odom.linear.x , 0],
-                        [0, 1-self.dt*self.odom.angular.z*self.x_vec[0]]], dtype=np.float32)
-        self.x_vec = np.matmul(F,self.x_vec) # Predicted state estimate
-        self.p = np.linalg.multi_dot([F,self.p, F.T]) + self.q # Predicted estimate covariance
+        temp = self.x_vec[0] if self.x_vec[0] != 0 else 10e5
+        F = np.array([[1-self.dt*self.odom.linear.x/temp, 0],
+                      [-self.dt*self.odom.angular.z, 1]], dtype=np.float32)
+
+        self.x_vec = np.matmul(F, self.x_vec)  # Predicted state estimate
+        self.p = np.linalg.multi_dot([F, self.p, F.T]) + self.q  # Predicted estimate covariance
         # print(self.x_vec)
 
     def update(self, observe):
@@ -73,6 +74,7 @@ class KLF_alvarMarker():
         k = self.p.dot(np.linalg.inv(s))
         self.x_vec = self.x_vec + k.dot(y_vec)
         self.p = (np.eye(2)-k).dot(self.p)
+        self.p = np.linalg.multi_dot([(np.eye(2)-k), self.p, (np.eye(2)-k).T]) + np.linalg.multi_dot([k, self.r, k.T])
 
 
 class Alvar_markers():
@@ -160,10 +162,9 @@ def detection_cb(msg, items_list, point_cloud_data):
     if not items_list:
         pass
     elif msg.class_id in items_list:
-        
         [u, v] = [int(msg.pose.x_center), int(msg.pose.y_center)]
-        
-        location_xyz = list(pc2.read_points(point_cloud_data.data, ('x', 'y', 'z'), skip_nans=True, uvs=[[u, v]])) # location type --> [(touple)]
+        # location type --> [(touple)]
+        location_xyz = list(pc2.read_points(point_cloud_data.data, ('x', 'y', 'z'), skip_nans=True, uvs=[[u, v]]))
         if location_xyz:
             converted_location = list_2_stampPose(location_xyz[0])
             transform = tf_buffer.lookup_transform('base_footprint',
@@ -184,9 +185,12 @@ def item_cb(msg):
     if '' in items_list:
         # alvar_marker.pub.unregister()
         # rospy.time.Timer.shotdown()
-        alvar_marker._timer.shutdown()
+        if alvar_marker:
+            alvar_marker._timer._shutdown = True
         del alvar_marker
         del estimator
+        alvar_marker = False
+        estimator = False
         return itemsResponse(False)
     estimator = KLF_alvarMarker()
     if 'person' in items_list:
@@ -200,7 +204,8 @@ def main():
     global tf_buffer, tf_listener, pub_img, pick_pub_markers, person_pub_markers, estimator, items_list, alvar_marker
     items_list = []
     alvar_marker = False
-    rospy.Service('get_items_list', items, item_cb)
+    estimator = False
+    rospy.Service('alvar_marker_service', items, item_cb)
     pick_pub_markers = rospy.Publisher(pick_markers_publish_topic, AlvarMarkers,
                                        queue_size=10)
     person_pub_markers = rospy.Publisher(person_markers_publish_topic, AlvarMarkers,
