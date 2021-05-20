@@ -17,11 +17,14 @@ import copy
 import string
 
 # --------------------------description---------------------- /
-# This script getting names of items as args, if it detect
+# This script is a serviec that gets names of items, then if it detect
 # one of them its publish PoseStamped and image with the dot in the item center.
-# This script get
+# The PoseStamped are publish at 2 different topic according to the detect object.
+# One topic for pick (cup, bottle) second topic for cup deliver to person.
+# For intput '' the servie stop, for input like 'cup,bottle' the service publish
+# alvar marker of cup or bottle in the pick up matker topic.
+# Additionaly this script include KLF that estimate the object location
 
-#
 
 pointcloud_topic = '/kinect2/qhd/points'
 camera_topic = '/kinect2/qhd/image_color_rect/compressed'
