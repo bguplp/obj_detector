@@ -1,0 +1,4 @@
+string name
+---
+obj_detector/Pose pose
+bool res
