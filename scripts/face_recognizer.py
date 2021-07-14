@@ -13,7 +13,10 @@ import string
 # from cv_bridge import CvBridge, CvBridgeError
 
 # This code is heavily based on https://github.com/ageitgey/face_recognition.git
-# The integration to ROS was made by Orel Hamamy
+# The integration to ROS was made by Orel Hamamy, this script create service for
+# recognize person the current frame from 'camera_topic'. The service call request
+# is a name of person, if the individual is in the frame the service responde with 
+# the face center location.
 
 camera_topic = '/kinect2/qhd/image_color_rect/compressed'
 
@@ -35,7 +38,6 @@ def recognotion_cb(msg):
         # See if the face is a match for the known face(s)
         matches = face_recognition.compare_faces(faces_encodings, face_encoding)
         name = "Unknown"
-
         # # If a match was found in known_face_encodings, just use the first one.
         # if True in matches:
         #     first_match_index = matches.index(True)
@@ -53,7 +55,6 @@ def recognotion_cb(msg):
             res.pose.x_center = (face_location[1]+face_location[3])/2
             res.pose.y_center = (face_location[0]+face_location[2])/2
             return res
-        print("name:", name)
         face_names.append(name)
     return res
 
