@@ -15,7 +15,7 @@ import string
 # This code is heavily based on https://github.com/ageitgey/face_recognition.git
 # The integration to ROS was made by Orel Hamamy, this script create service for
 # recognize person the current frame from 'camera_topic'. The service call request
-# is a name of person, if the individual is in the frame the service responde with 
+# is a name of person, if the individual is in the frame the service responde with
 # the face center location.
 
 camera_topic = '/kinect2/qhd/image_color_rect/compressed'
