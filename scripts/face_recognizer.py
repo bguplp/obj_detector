@@ -33,7 +33,6 @@ def recognotion_cb(msg):
     face_locations = face_recognition.face_locations(img)
     face_encodings = face_recognition.face_encodings(img, face_locations)
     face_names = []
-
     for face_location, face_encoding in zip(face_locations, face_encodings):
         # See if the face is a match for the known face(s)
         matches = face_recognition.compare_faces(faces_encodings, face_encoding)
@@ -56,6 +55,7 @@ def recognotion_cb(msg):
             res.pose.y_center = (face_location[0]+face_location[2])/2
             return res
         face_names.append(name)
+        
     return res
 
 
