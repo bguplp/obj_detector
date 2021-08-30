@@ -202,6 +202,7 @@ def item_cb(msg):
         alvar_marker = Alvar_markers(pick_pub_markers)
     return itemsResponse(True)
 
+
 def main():
     point_cloud_data = pointcloud()
     global tf_buffer, tf_listener, pub_img, pick_pub_markers, person_pub_markers, estimator, items_list, alvar_marker
