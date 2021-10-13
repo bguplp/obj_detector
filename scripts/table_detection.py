@@ -10,6 +10,9 @@ import sensor_msgs.point_cloud2 as pc2
 import tf2_ros
 import tf
 
+# This scirpt is still at developing... by Orel Hamamy
+
+
 global kinect2
 
 
@@ -21,14 +24,14 @@ class pointcloud():
         self.data = msg
 
 
-def edges_map(heights, th=0.05, display = False):
+def edges_map(heights, th=0.05, display=False):
     heights = np.abs(heights.reshape(heights.shape[0:2]))
     height_sh = heights.shape
     # Calculate the horizinal and vertical edges and sum them
     edges_map = (np.abs(np.concatenate((np.diff(heights, axis=0),
-                                    np.zeros((1, height_sh[1]))), axis=0)) +
-                np.abs(np.concatenate((np.diff(heights, axis=1),
-                np.zeros((height_sh[0], 1))), axis=1)))
+                                        np.zeros((1, height_sh[1]))), axis=0)) +
+                 np.abs(np.concatenate((np.diff(heights, axis=1),
+                                        np.zeros((height_sh[0], 1))), axis=1)))
     edges_map[edges_map < th] = 0
     edges_map[edges_map >= th] = 1
     edges_map = (edges_map*255).astype(np.uint8)
@@ -36,6 +39,7 @@ def edges_map(heights, th=0.05, display = False):
         cv2.imshow('heights2', edges_map)
         cv2.waitKey(1)
     return edges_map
+
 
 def cb_img(msg):
     global kinect2
@@ -60,9 +64,9 @@ def main():
     z_vector.header.frame_id = 'base_link'
     z_vector.header.stamp = rospy.Time(0)
     while True:
-        # timing = rospy.Time.now() 
+        # timing = rospy.Time.now()
         # Transform to kinect frame
-        plane_vector = tf_buffer.transform(z_vector,'kinect2_depth_optical_frame')
+        plane_vector = tf_buffer.transform(z_vector, 'kinect2_depth_optical_frame')
 
         vec = -np.array([plane_vector.pose.position.x, plane_vector.pose.position.y, plane_vector.pose.position.z]).reshape((3, 1))  # Get the normal to the ground (base_link)
         vec = vec/np.linalg.norm(vec)
